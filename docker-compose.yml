@@ -1,32 +1,59 @@
-version: "3.8"
+version: '3.8'
 
 services:
+
   mysql:
-    image: mysql:8.0
-    container_name: mysql
+    image: mysql:8
+    container_name: mysql_db
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: devopsdb
+      MYSQL_USER: devuser
+      MYSQL_PASSWORD: devuser
     ports:
       - "3306:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
-      - devops-network
+      - devops
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
+    container_name: backend_server
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql
+      DB_USER: devuser
+      DB_PASSWORD: devuser
+      DB_NAME: devopsdb
+      PORT: 4000
     ports:
       - "4000:4000"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+    networks:
+      - devops
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
+    container_name: frontend_app
     ports:
       - "3000:3000"
     depends_on:
       - backend
+    networks:
+      - devops
+
+networks:
+  devops:            # <-- This must match services above
+    driver: bridge
+
+volumes:
+  mysql_data:
