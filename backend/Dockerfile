@@ -1,14 +1,20 @@
-FROM node:20-alpine
+FROM node:20.11-alpine as builder
+
+WORKDIR /app
+
+COPY package*.json .
+
+RUN npm install --production
+
+COPY . .
+
+FROM node:20.11-alpine
 
 WORKDIR /app
 
 RUN npm install pm2 -g
 
-COPY package.json .
-
-RUN npm install
-
-COPY . .
+COPY --from=builder /app /app
 
 EXPOSE 4000
 

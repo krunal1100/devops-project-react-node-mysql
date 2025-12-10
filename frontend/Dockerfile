@@ -1,10 +1,8 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-RUN npm install -g pm2 serve
-
-COPY package.json .
+COPY package*.json .
 
 RUN npm install
 
@@ -12,7 +10,13 @@ COPY . .
 
 RUN npm run build
 
+FROM nginx:alpine
+
+RUN rm -rf /usr/share/nginx/html/*
+
+COPY --from=builder /app/build /usr/share/nginx/html
+
 EXPOSE 3000
 
-CMD ["pm2-runtime", "start", "serve", "--name", "react-app", "--", "-s", "build", "-l", "3000"]
+CMD ["nginx", "-g", "daemon off;"]
 
