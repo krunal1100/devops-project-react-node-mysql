@@ -51,8 +51,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend_app
-    ports:
-      - "80:80"
     depends_on:
       - backend
     networks:
