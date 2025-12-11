@@ -5,7 +5,7 @@ function App() {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState({ name: "", email: "" });
 
-  const BACKEND = "http://13.205.15.98:4000";
+  const BACKEND = "/api";
 
   useEffect(() => {
     axios.get(`${BACKEND}/users`).then(res => setUsers(res.data));
