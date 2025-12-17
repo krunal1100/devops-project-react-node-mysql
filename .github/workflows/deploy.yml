@@ -1,0 +1,91 @@
+name: Build, Push & Deploy (Portable Blue-Green)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            krunal1100/three-tire-backend:${{ github.sha }}
+            krunal1100/three-tire-backend:latest
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            krunal1100/three-tire-frontend:${{ github.sha }}
+            krunal1100/three-tire-frontend:latest
+
+      # create .env on runner from GitHub secrets (portable)
+      - name: Generate .env
+        run: |
+          cat > .env <<EOF
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER=${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+          DOCKER_REPO_BACKEND=krunal1100/three-tire-backend
+          DOCKER_REPO_FRONTEND=krunal1100/three-tire-frontend
+          EOF
+          chmod 600 .env
+
+      # Copy only required runtime files to target EC2
+      - name: Copy deploy script, nginx.conf and .env to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT }}
+          source: |
+            deploy/backend_deploy_bluegreen.sh
+            nginx/nginx.conf
+            .env
+          target: /home/${{ secrets.EC2_USER }}/app/
+      
+      - name: SSH into EC2 - run deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT }}
+          script: |
+            set -e
+            cd /home/${{ secrets.EC2_USER }}/app
+            chmod +x deploy/backend_deploy_bluegreen.sh
+            # Pull images that were built by this workflow
+            docker pull krunal1100/three-tire-backend:${{ github.sha }}
+            docker pull krunal1100/three-tire-frontend:${{ github.sha }}
+            # Run backend blue/green deploy
+            ./deploy/backend_deploy_bluegreen.sh ${{ github.sha }}
+            # Replace frontend
+            docker rm -f frontend_app || true
+            docker run -d --name frontend_app --network devops -p 80:80 \
+              krunal1100/three-tire-frontend:${{ github.sha }}
+            # Optionally pull mysql image if not present (will preserve data in volume)
+            docker pull mysql:8.0.36 || true
+            echo "Deployment finished"

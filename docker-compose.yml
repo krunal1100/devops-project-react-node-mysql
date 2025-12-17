@@ -1,9 +1,9 @@
-version: '3.8'
+version: "3.9"
 
 services:
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.36
     container_name: mysql_db
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     networks:
       - devops
     healthcheck:
@@ -34,29 +34,24 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE}
       PORT: 4000
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - devops
+    restart: unless-stopped
     logging:
       driver: json-file
       options:
         max-size: "50m"
         max-file: "5"
-    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend_app
-    depends_on:
-      - backend
     networks:
       - devops
     restart: unless-stopped
-  
+
   nginx:
     image: nginx:alpine
     container_name: nginx_proxy
@@ -74,9 +69,9 @@ services:
       - devops
     restart: unless-stopped
 
-networks:
-  devops:            # <-- This must match services above
-    driver: bridge
-
 volumes:
   mysql_data:
+
+networks:
+  devops:
+    driver: bridge
