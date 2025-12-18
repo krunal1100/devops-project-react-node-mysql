@@ -87,8 +87,7 @@ jobs:
             ./deploy/backend_deploy_bluegreen.sh ${{ github.sha }}
             # Replace frontend
             docker rm -f frontend_app || true
-            docker run -d --name frontend_app --network devops -p 80:80 \
-              krunal1100/three-tire-frontend:${{ github.sha }}
+            docker run -d --name frontend_app --network devops krunal1100/three-tire-frontend:${{ github.sha }}
             # Optionally pull mysql image if not present (will preserve data in volume)
             docker pull mysql:8.0.36 || true
             echo "Deployment finished"
