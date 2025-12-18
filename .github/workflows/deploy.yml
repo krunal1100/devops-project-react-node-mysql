@@ -59,17 +59,15 @@ jobs:
             chmod 600 /home/${{ secrets.EC2_USER }}/app/.env
 
       # Copy only required runtime files to target EC2
-      - name: Copy deploy script, nginx.conf and .env to server
+      - name: Copy deploy files to server
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_SSH_PORT }}
-          source: |
-            deploy/backend_deploy_bluegreen.sh
-            nginx/nginx.conf
-          target: /home/${{ secrets.EC2_USER }}/app/
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USER }}
+            key: ${{ secrets.EC2_SSH_KEY }}
+            port: ${{ secrets.EC2_SSH_PORT }}
+            source: "deploy/backend_deploy_bluegreen.sh,nginx/nginx.conf"
+            target: /home/${{ secrets.EC2_USER }}/app/
       
       - name: SSH into EC2 - run deploy
         uses: appleboy/ssh-action@master
