@@ -1,79 +1,59 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-NETWORK="devops"
+NETWORK=devops
+APP_DIR=/home/ubuntu/app
 
-# Ensure Docker network exists
-if ! docker network ls --format '{{.Name}}' | grep -q "^${NETWORK}$"; then
-  echo "Docker network '${NETWORK}' not found. Creating it..."
-  docker network create "${NETWORK}"
+echo "▶ Ensure Docker network"
+docker network inspect $NETWORK >/dev/null 2>&1 || docker network create $NETWORK
+
+echo "▶ Ensure MySQL"
+if ! docker ps -a --format '{{.Names}}' | grep -q '^mysql_db$'; then
+  docker run -d \
+    --name mysql_db \
+    --network $NETWORK \
+    -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD \
+    -e MYSQL_DATABASE=$MYSQL_DATABASE \
+    -e MYSQL_USER=$MYSQL_USER \
+    -e MYSQL_PASSWORD=$MYSQL_PASSWORD \
+    -v mysql_data:/var/lib/mysql \
+    --restart unless-stopped \
+    mysql:8.0
 fi
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <image-tag>"
-  exit 1
-fi
+echo "▶ Deploy backend"
+docker rm -f backend_active || true
+docker run -d \
+  --name backend_active \
+  --network $NETWORK \
+  -e DB_HOST=mysql_db \
+  -e DB_USER=$MYSQL_USER \
+  -e DB_PASSWORD=$MYSQL_PASSWORD \
+  -e DB_NAME=$MYSQL_DATABASE \
+  --restart unless-stopped \
+  krunal1100/three-tire-backend:$IMAGE_TAG
 
-TAG="$1"
-REPO="krunal1100/three-tire-backend"
-NETWORK="devops"
-NGINX_CONTAINER="nginx_proxy"
+echo "▶ Deploy frontend"
+docker rm -f frontend_app || true
+docker run -d \
+  --name frontend_app \
+  --network $NETWORK \
+  --restart unless-stopped \
+  krunal1100/three-tire-frontend:$IMAGE_TAG
 
-# derive names
-IMAGE="$REPO:$TAG"
+echo "▶ Deploy nginx"
+docker rm -f nginx_proxy || true
+docker run -d \
+  --name nginx_proxy \
+  --network $NETWORK \
+  -p 80:80 -p 443:443 \
+  -v $APP_DIR/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro \
+  -v $APP_DIR/certbot/www:/var/www/certbot \
+  -v $APP_DIR/certbot/conf:/etc/letsencrypt \
+  --restart unless-stopped \
+  nginx:alpine
 
-echo "Pulling image $IMAGE..."
-docker pull "$IMAGE"
+echo "▶ Deploy monitoring"
+docker compose -f docker-compose.monitor.yml up -d
 
-# decide which color to bring up
-if docker ps -a --format '{{.Names}}' | grep -q '^backend_blue$'; then
-  # if nginx currently points to blue, we'll start green; otherwise blue
-  if docker exec "$NGINX_CONTAINER" grep -q 'backend_blue' /etc/nginx/conf.d/default.conf 2>/dev/null; then
-    NEW="backend_green"
-  else
-    NEW="backend_blue"
-  fi
-else
-  NEW="backend_blue"
-fi
-OLD=$( [ "$NEW" = "backend_blue" ] && echo backend_green || echo backend_blue )
-
-echo "New container will be: $NEW  (old: $OLD)"
-
-# remove any previous container with the new name
-docker rm -f "$NEW" 2>/dev/null || true
-
-# launch new backend container from pulled image
-docker run -d --name "$NEW" \
-  --network "$NETWORK" \
-  -e DB_HOST=mysql -e DB_USER="${MYSQL_USER:-devuser}" -e DB_PASSWORD="${MYSQL_PASSWORD:-devuserpassword}" -e DB_NAME="${MYSQL_DATABASE:-devopsdb}" \
-  "$IMAGE"
-
-# wait for /health to be ok
-echo "Waiting for /health on $NEW..."
-for i in $(seq 1 30); do
-  if docker exec "$NEW" sh -c "wget -qO- http://localhost:4000/health 2>/dev/null || true" | grep -qi 'ok'; then
-    echo "Health OK"
-    break
-  fi
-  sleep 2
-done
-
-# update nginx upstream: replace server backend_xxx:4000 with new
-echo "Updating nginx upstream to $NEW..."
-sed -i "s/server backend_.*:4000;/server $NEW:4000;/" nginx/nginx.conf || true
-
-# copy new config into nginx container and reload
-if docker ps -a --format '{{.Names}}' | grep -q "$NGINX_CONTAINER"; then
-  docker cp nginx/nginx.conf "$NGINX_CONTAINER":/etc/nginx/conf.d/default.conf
-  docker kill -s HUP "$NGINX_CONTAINER"
-  echo "Nginx reloaded"
-else
-  echo "WARNING: nginx container $NGINX_CONTAINER not found – please ensure nginx proxy is running"
-fi
-
-# remove old container
-echo "Removing old container $OLD (if exists)..."
-docker rm -f "$OLD" 2>/dev/null || true
-
-echo "Blue/Green deploy complete. Live: $NEW"
+echo "✅ LIVE deployment complete"
