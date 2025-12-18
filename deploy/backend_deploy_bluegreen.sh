@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+NETWORK="devops"
+
+# Ensure Docker network exists
+if ! docker network ls --format '{{.Name}}' | grep -q "^${NETWORK}$"; then
+  echo "Docker network '${NETWORK}' not found. Creating it..."
+  docker network create "${NETWORK}"
+fi
+
 if [ $# -ne 1 ]; then
   echo "Usage: $0 <image-tag>"
   exit 1
