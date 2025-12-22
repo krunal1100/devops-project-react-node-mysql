@@ -50,7 +50,7 @@ services:
     image: prom/mysqld-exporter:latest
     container_name: mysqld_exporter
     environment:
-      - DATA_SOURCE_NAME=${MYSQL_EXPORTER_DSN}
+      - DATA_SOURCE_NAME: devuser:devuser@(mysql_db:3306)/
     depends_on:
       - mysql
     ports:
