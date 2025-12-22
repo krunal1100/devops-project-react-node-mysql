@@ -34,21 +34,23 @@ services:
     restart: unless-stopped
 
   nginx_exporter:
-    image: nginx/nginx-prometheus-exporter:0.11.0
-    container_name: nginx_exporter
-    environment:
-      - NGINX_VTS_STATUS_URI=http://nginx:80/nginx_status
-    ports:
-      - "9113:9113"
-    networks:
-      - devops
-    restart: unless-stopped
+  image: nginx/nginx-prometheus-exporter:0.11.0
+  container_name: nginx_exporter
+  command:
+    - "-nginx.scrape-uri=http://nginx_proxy/stub_status"
+  ports:
+    - "9113:9113"
+  networks:
+    - devops
+  restart: unless-stopped
 
   mysqld_exporter:
-    image: prom/mysqld-exporter:latest
+    image: prom/mysqld-exporter
     container_name: mysqld_exporter
-    environment:
-      DATA_SOURCE_NAME: devuser:devuser@(mysql_db:3306)/
+    command:
+      - "--mysqld.address=mysql_db:3306"
+      - "--mysqld.username=devuser"
+      - "--mysqld.password=devuser"
     ports:
       - "9104:9104"
     networks:
