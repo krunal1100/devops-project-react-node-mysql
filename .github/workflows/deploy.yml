@@ -33,7 +33,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        source: "deploy,nginx,monitoring,docker-compose.monitor.yml"
+        source: "deploy,nginx,monitoring,monitoring,docker-compose-monitor.yml"
         target: /home/ubuntu/app
 
     - uses: appleboy/ssh-action@master

@@ -54,6 +54,6 @@ docker run -d \
   nginx:alpine
 
 echo "▶ Deploy monitoring"
-docker compose -f docker-compose.monitor.yml up -d
+docker compose -f docker-compose-monitor.yml up -d
 
 echo "✅ LIVE deployment complete"
