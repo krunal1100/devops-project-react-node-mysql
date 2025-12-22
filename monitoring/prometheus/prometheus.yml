@@ -21,12 +21,8 @@ scrape_configs:
 
   - job_name: 'backend'
     static_configs:
-      - targets: ['backend:4000']
-
-  - job_name: 'frontend'
-    static_configs:
-      - targets: ['frontend:80']
+      - targets: ['backend_active:4000']
 
   - job_name: 'node'
     static_configs:
-      - targets: ['127.0.0.1:9100']
+      - targets: ['node_exporter:9100']
