@@ -45,12 +45,10 @@ services:
     restart: unless-stopped
 
   mysqld_exporter:
-    image: prom/mysqld-exporter
+    image: prom/mysqld-exporter:latest
     container_name: mysqld_exporter
-    command:
-      - "--mysqld.address=mysql_db:3306"
-      - "--mysqld.username=devuser"
-      - "--mysqld.password=devuser"
+    environment:
+      DATA_SOURCE_NAME: "devuser:devuser@(mysql_db:3306)/"
     ports:
       - "9104:9104"
     networks:
