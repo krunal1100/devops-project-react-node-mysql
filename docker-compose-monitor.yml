@@ -34,15 +34,15 @@ services:
     restart: unless-stopped
 
   nginx_exporter:
-  image: nginx/nginx-prometheus-exporter:0.11.0
-  container_name: nginx_exporter
-  command:
-    - "-nginx.scrape-uri=http://nginx_proxy/stub_status"
-  ports:
-    - "9113:9113"
-  networks:
-    - devops
-  restart: unless-stopped
+    image: nginx/nginx-prometheus-exporter:0.11.0
+    container_name: nginx_exporter
+    command:
+      - "-nginx.scrape-uri=http://nginx_proxy/stub_status"
+    ports:
+      - "9113:9113"
+    networks:
+      - devops
+    restart: unless-stopped
 
   mysqld_exporter:
     image: prom/mysqld-exporter
