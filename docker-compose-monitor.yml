@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - devops
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:9.5.0
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "grafana_admin_password"
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - devops
+    restart: unless-stopped
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    pid: "host"
+    network_mode: "host"
+    restart: unless-stopped
+
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:0.11.0
+    container_name: nginx_exporter
+    environment:
+      - NGINX_VTS_STATUS_URI=http://nginx:80/nginx_status
+    ports:
+      - "9113:9113"
+    networks:
+      - devops
+    restart: unless-stopped
+
+  mysqld_exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: mysqld_exporter
+    environment:
+      - DATA_SOURCE_NAME=${MYSQL_EXPORTER_DSN}
+    depends_on:
+      - mysql
+    ports:
+      - "9104:9104"
+    networks:
+      - devops
+    restart: unless-stopped
+
+networks:
+  devops:
+    external: true
