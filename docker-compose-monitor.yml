@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
 
   mysqld_exporter:
-    image: prom/mysqld-exporter:latest
+    image: prom/mysqld-exporter:v0.14.0
     container_name: mysqld_exporter
     environment:
       DATA_SOURCE_NAME: "devuser:devuser@(mysql_db:3306)/"
