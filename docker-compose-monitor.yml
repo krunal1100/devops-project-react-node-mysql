@@ -37,7 +37,7 @@ services:
     image: nginx/nginx-prometheus-exporter:0.11.0
     container_name: nginx_exporter
     command:
-      - "-nginx.scrape-uri=http://nginx_proxy/stub_status"
+      - "-nginx.scrape-uri=http://nginx_proxy:80/stub_status"
     ports:
       - "9113:9113"
     networks:
