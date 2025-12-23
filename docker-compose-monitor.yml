@@ -29,8 +29,10 @@ services:
   node_exporter:
     image: prom/node-exporter:latest
     container_name: node_exporter
-    pid: "host"
-    network_mode: "host"
+    ports:
+    - "9100:9100"
+    networks:
+      - devops
     restart: unless-stopped
 
   nginx_exporter:
