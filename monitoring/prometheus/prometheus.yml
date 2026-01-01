@@ -30,7 +30,7 @@ scrape_configs:
 
   - job_name: 'backend'
     static_configs:
-      - targets: ['backend_active:4000']
+      - targets: ['backend:4000']
 
   - job_name: 'node'
     static_configs:
