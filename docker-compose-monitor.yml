@@ -56,6 +56,19 @@ services:
     networks:
       - devops
     restart: unless-stopped
+  
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    ports:
+      - "9093:9093"
+    networks:
+      - devops
+    restart: unless-stopped
 
 networks:
   devops:
