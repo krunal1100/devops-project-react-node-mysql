@@ -59,6 +59,13 @@ fi
 
 echo "▶ Active=$ACTIVE → Deploying=$NEW"
 
+# 🔴 IMPORTANT: remove active FIRST (free alias)
+if docker ps --format '{{.Names}}' | grep -q backend_${ACTIVE}; then
+  echo "▶ Removing active backend_${ACTIVE}"
+  docker rm -f backend_${ACTIVE}
+fi
+
+# ✅ Start new backend and claim alias
 docker run -d \
   --name backend_${NEW} \
   --network $NETWORK \
@@ -77,11 +84,6 @@ if ! docker exec backend_${NEW} wget -qO- http://localhost:4000/health >/dev/nul
   echo "❌ Backend health failed"
   docker rm -f backend_${NEW}
   exit 1
-fi
-
-echo "▶ Switching backend traffic"
-if docker ps --format '{{.Names}}' | grep -q backend_${ACTIVE}; then
-  docker rm -f backend_${ACTIVE}
 fi
 
 echo "✅ Backend now active: backend_${NEW}"

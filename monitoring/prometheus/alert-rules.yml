@@ -40,7 +40,7 @@ groups:
 
       - alert: BackendDown
         expr: up{job="backend"} == 0
-        for: 1m
+        for: 30s
         labels:
           severity: critical
         annotations:
